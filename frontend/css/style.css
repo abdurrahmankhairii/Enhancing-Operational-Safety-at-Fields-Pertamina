@@ -1,0 +1,274 @@
+:root {
+    --pertamina-blue: #0076CE;
+    --pertamina-red: #ED1D24;
+    --sidebar-bg: #0A2D62;
+    --body-bg: #f4f7f9;
+}
+
+body {
+    background-color: var(--body-bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- Main Header --- */
+.main-header {
+    background-color: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Sidebar --- */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    color: white;
+    height: calc(100vh - 65px);
+    position: fixed;
+    width: 150px;
+    top: 65px;
+    left: 0;
+    transition: width 0.3s;
+    z-index: 1020;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 0.375rem;
+    margin-bottom: 4px;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.sidebar .nav-link.active,
+.sidebar .nav-link:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar .fa-fw { width: 1.25em; }
+.sidebar .nav-link span { margin-top: 4px; }
+
+/* --- Main Content --- */
+.main-content {
+    padding: 0;
+    margin-left: 150px;
+    min-height: calc(100vh - 65px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Left Panel (Search and Activity Log) --- */
+.left-panel {
+    background-color: #f8f9fa;
+    border-right: 1px solid #e0e0e0;
+    padding: 10px;
+    position: fixed;
+    top: 65px;
+    left: 150px;
+    width: 200px;
+    height: calc(100vh - 65px);
+    overflow-y: auto;
+}
+
+.left-panel .activity-log {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.log-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    border-left: 5px solid;
+    margin-bottom: 0.5rem;
+    background-color: #fff;
+    border-radius: 0 0.375rem 0.375rem 0;
+    border-top: 1px solid #e0e0e0;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 0.85rem;
+}
+
+.log-item.alert-danger { border-left-color: var(--pertamina-red); }
+.log-item.alert-warning { border-left-color: #ffc107; }
+.log-item .log-time { font-weight: 600; color: #6c757d; width: 100%; margin-bottom: 2px; font-size: 0.8rem; }
+.log-item .log-details { flex-grow: 1; }
+.log-item .log-action { text-align: right; }
+.log-item .btn { font-size: 0.75rem; padding: 2px 6px; }
+
+/* --- Overview Panel --- */
+.overview-panel {
+    margin-left: 200px;
+    padding: 10px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    height: 80px;
+    position: fixed;
+    top: 65px;
+    left: 350px;
+    width: calc(100% - 350px);
+}
+
+.stat-card {
+    border: 1px solid #e0e0e0;
+    text-align: center;
+    border-radius: 0.375rem;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-card h5 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    color: var(--pertamina-blue);
+}
+
+.stat-card p {
+    margin-bottom: 0;
+    color: #6c757d;
+    font-size: 0.7rem;
+}
+
+/* --- Video & User Info Panel --- */
+.video-container {
+    margin-left: 200px;
+    margin-top: 80px;
+    height: calc(100vh - 145px);
+    position: relative;
+    overflow: hidden;
+    background-color: #000000;
+}
+
+.video-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    aspect-ratio: 16 / 9;
+}
+
+.user-info-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(10, 45, 98, 0.85);
+    backdrop-filter: blur(5px);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    min-width: 320px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-info-panel.status-aman {
+    border-left: 5px solid #28a745;
+}
+
+.user-info-panel.status-peringatan {
+    border-left: 5px solid #ffc107;
+}
+
+.user-info-panel.status-bahaya {
+    border-left: 5px solid #dc3545;
+}
+
+.user-info-panel h6 {
+    color: #adb5bd;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 5px;
+}
+
+.ppe-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ppe-list-item:last-child { border-bottom: none; }
+.ppe-list-item .item-details { display: flex; align-items: center; }
+.ppe-list-item img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+.ppe-list-item .item-status { font-weight: 500; }
+
+/* Styling untuk bingkai (overlay) wajah yang baru dan lebih baik */
+.face-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    height: 80%;
+    
+    /* Efek Cutout: Membuat area di luar oval menjadi gelap */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); 
+    
+    /* Garis Oval Solid */
+    border: 4px solid #16a085; /* Anda bisa ganti warnanya, misal: #0076CE untuk biru Pertamina */
+    
+    border-radius: 50%; /* Membuatnya menjadi oval */
+    pointer-events: none;
+    
+    /* Animasi halus agar terlihat "hidup" */
+    animation: pulse 2s infinite;
+}
+
+/* Keyframes untuk animasi pulse */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+    }
+    100% {
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Container untuk kamera (tetap sama, pastikan ada) */
+.camera-container {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    max-width: 640px;
+}
+
+/* CCTV Grid */
+#cctvGrid {
+    display: grid;
+    gap: 10px;
+    height: calc(100vh - 400px);
+}
+#cctvGrid > div {
+    background-color: black;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+}
+#cctvGrid img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    aspect-ratio: 16 / 9;
+}
