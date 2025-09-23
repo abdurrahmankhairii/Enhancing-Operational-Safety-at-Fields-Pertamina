@@ -61,7 +61,7 @@
                 <li>
                     <a href="users.html" class="nav-link">
                         <i class="fa-solid fa-users fa-fw"></i>
-                        <span class="ms-2">Users</span>
+                        <span class="ms-2">Workers</span>
                     </a>
                 </li>
             </ul>
@@ -74,14 +74,14 @@
 
         <!-- Main Content -->
         <main class="main-content flex-grow-1" style="margin-left: 150px; padding: 0;">
-            <div class="d-flex" style="margin-top: 65px;">
+            <div class="d-flex">
                 <!-- Search and Activity Log Panel -->
                 <div class="left-panel" style="width: 200px; position: fixed; top: 65px; left: 150px; height: calc(100vh - 65px); background-color: #f8f9fa; padding: 10px; border-right: 1px solid #e0e0e0;">
                     <div class="input-group mb-3">
-                        <input type="text" class="form-control form-control-sm" placeholder="Search User, Name, Function, Time )">
+                        <input type="text" class="form-control form-control-sm" placeholder="Search Worker, Name, Function, Time">
                     </div>
                     <ul class="nav nav-tabs nav-tabs-sm" id="myTab" role="tablist">
-                        <li class="nav-item" role="presentation"><button class="nav-link active small" data-bs-toggle="tab" data-bs-target="#all" type="button">Show All Users</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link active small" data-bs-toggle="tab" data-bs-target="#all" type="button">Show All Workers</button></li>
                     </ul>
                     <div class="activity-log mt-3" style="max-height: calc(100vh - 200px); overflow-y: auto;">
                         <div class="log-item alert-danger p-2 mb-2">
@@ -117,21 +117,21 @@
                 </div>
 
                 <!-- Gate System Overview -->
-                <div class="overview-panel" style="margin-left: 200px; padding: 10px; background-color: #ffffff; border-bottom: 1px solid #e0e0e0; height: 80px;">
-                    <h4 class="mb-0">Gate System Monitoring Overview</h4>
-                    <div class="d-flex justify-content-between align-items-center">
+                <div class="overview-panel" style="margin-left: 200px; padding: 20px; background-color: #ffffff; border-bottom: 1px solid #e0e0e0; height: 150px; position: fixed; top: 65px; left: 350px; width: calc(100% - 350px);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Gate System Monitoring Overview</h4>
                         <div class="d-flex align-items-center">
                             <div class="me-4 text-end">
-                                <h6 class="mb-0" style="font-size: 0.8rem;">Total Users Today</h6>
+                                <h6 class="mb-0" style="font-size: 0.8rem;">Total Workers Today</h6>
                                 <h5 class="mb-0" style="font-size: 1rem;">30</h5>
                             </div>
                             <div class="text-end">
-                                <h6 class="mb-0" style="font-size: 0.8rem;">Logged in Users</h6>
+                                <h6 class="mb-0" style="font-size: 0.8rem;">Logged in Workers</h6>
                                 <h5 class="mb-0" style="font-size: 1rem;">964</h5>
                             </div>
                         </div>
                     </div>
-                    <div class="row g-3">
+                    <div class="row g-3" style="height: 70px;">
                         <div class="col"><div class="card stat-card"><div class="card-body"><h5>201</h5><p>Visited</p></div></div></div>
                         <div class="col"><div class="card stat-card"><div class="card-body"><h5>0</h5><p>Armed</p></div></div></div>
                         <div class="col"><div class="card stat-card"><div class="card-body text-danger"><h5>2</h5><p>Triggered</p></div></div></div>
@@ -141,7 +141,7 @@
                 </div>
 
                 <!-- Video Feed -->
-                <div class="video-container" style="margin-left: 200px; margin-top: 80px; height: calc(100vh - 145px); position: relative; overflow: hidden; background-color: #000000;">
+                <div class="video-container" style="margin-left: 200px; margin-top: 150px; height: calc(100vh - 215px); position: relative; overflow: hidden; background-color: #000000;">
                     <img id="videoFeed" src="https://via.placeholder.com/1280x720.png?text=Connecting..." class="video-feed" style="width: 100%; height: 100%; object-fit: cover; aspect-ratio: 16 / 9;">
                     <div id="userInfoPanel" class="user-info-panel d-none">
                         <h5 id="userName">Abdurrhman Khairi</h5>

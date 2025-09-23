@@ -1,3 +1,4 @@
+// app.js: Enhanced interactions - smooth transitions, tooltips, confirmations for elegance and usability
 document.addEventListener("DOMContentLoaded", function() {
     // --- Konfigurasi Awal & Cek Otentikasi ---
     const API_URL = 'http://127.0.0.1:8000';
@@ -28,6 +29,12 @@ document.addEventListener("DOMContentLoaded", function() {
         editWorkerModal = new bootstrap.Modal(editWorkerModalEl);
     }
 
+    // Initialize tooltips for elegance
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
     // --- Logika Dashboard jika di dashboard.html ---
     if (window.location.pathname.endsWith('dashboard.html')) {
         startDashboardWebSocket();
@@ -42,10 +49,14 @@ document.addEventListener("DOMContentLoaded", function() {
         const userNameEl = document.getElementById('userName');
         const ppeListEl = document.getElementById('ppeList');
 
-        dashboardWs.onopen = () => console.log("Dashboard WebSocket Connected");
+        dashboardWs.onopen = () => {
+            console.log("Dashboard WebSocket Connected");
+            videoFeed.src = 'https://via.placeholder.com/1280x720.png?text=Live+Feed...';
+        };
         dashboardWs.onclose = () => {
             console.log("Dashboard WebSocket Disconnected");
             userInfoPanel.classList.add('d-none');
+            videoFeed.src = 'https://via.placeholder.com/1280x720.png?text=Disconnected';
             dashboardWs = null;
         };
 
@@ -81,13 +92,14 @@ document.addEventListener("DOMContentLoaded", function() {
             const statusText = detected ? 'Memakai' : 'Tidak Memakai';
             const iconClass = detected ? 'fa-check text-success' : 'fa-times text-danger';
             const imagePath = `images/${name.toLowerCase().replace(' ', '-')}.jpg`;
+            const statusColor = detected ? 'text-success' : 'text-danger';
             return `
                 <div class="ppe-list-item">
                     <div class="item-details">
                         <img src="${imagePath}" alt="${name}">
-                        <span>${name}</span>
+                        <span class="fw-medium">${name}</span>
                     </div>
-                    <span class="item-status"><i class="fas ${iconClass} me-2"></i>${statusText}</span>
+                    <span class="item-status ${statusColor}"><i class="fas ${iconClass} me-2"></i>${statusText}</span>
                 </div>`;
         };
         
@@ -142,16 +154,28 @@ document.addEventListener("DOMContentLoaded", function() {
                     return;
                 }
                 try {
-                    await fetch(`${API_URL}/api/cctv`, {
+                    const response = await fetch(`${API_URL}/api/cctv`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify(cctvData)
                     });
-                    addCctvModal.hide();
-                    document.getElementById('addCctvForm').reset();
-                    loadCctvs();
+                    if (response.ok) {
+                        addCctvModal.hide();
+                        document.getElementById('addCctvForm').reset();
+                        loadCctvs();
+                        // Success feedback
+                        const btn = event.target;
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '<i class="fas fa-check me-2"></i>Saved!';
+                        btn.classList.add('btn-success');
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                            btn.classList.remove('btn-success');
+                        }, 2000);
+                    }
                 } catch (error) {
                     console.error("Error adding CCTV:", error);
+                    alert('Error adding CCTV. Please try again.');
                 }
             });
         }
@@ -168,6 +192,9 @@ document.addEventListener("DOMContentLoaded", function() {
         const layoutBtns = document.querySelectorAll('.layout-btn');
         layoutBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                layoutBtns.forEach(b => b.classList.remove('btn-primary', 'btn-secondary'));
+                e.target.classList.add('btn-primary');
+                e.target.classList.remove('btn-outline-secondary');
                 currentLayout = parseInt(e.target.dataset.layout);
                 updateCctvGrid(currentLayout);
             });
@@ -186,14 +213,15 @@ document.addEventListener("DOMContentLoaded", function() {
             cctvs.forEach(c => {
                 cctvTableBody.innerHTML += `
                     <tr>
-                        <td><input type="checkbox" data-id="${c.id}" data-ip="${c.ip_address}"></td>
-                        <td>${c.name}</td>
-                        <td>${c.ip_address}</td>
+                        <td><input type="checkbox" data-id="${c.id}" data-ip="${c.ip_address}" class="form-check-input"></td>
+                        <td><strong>${c.name}</strong></td>
+                        <td><code class="small">${c.ip_address}</code></td>
                         <td>${c.location}</td>
                     </tr>`;
             });
         } catch (error) {
             console.error("Error loading CCTVs:", error);
+            cctvTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Failed to load CCTVs</td></tr>`;
         }
     }
 
@@ -202,23 +230,27 @@ document.addEventListener("DOMContentLoaded", function() {
         const selectedIps = Array.from(selectedCheckboxes).map(cb => cb.dataset.ip);
         const grid = document.getElementById('cctvGrid');
         grid.innerHTML = '';
-        let cols = 1;
-        if (layout === 2) cols = 2;
-        if (layout === 4) cols = 2;
-        if (layout === 9) cols = 3;
-        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        let cols = Math.min(layout, selectedIps.length);
+        if (cols === 0) return;
+        // Dynamic grid based on layout
+        const rowClass = cols === 1 ? 'col-12' : cols === 2 ? 'col-md-6' : cols === 4 ? 'col-md-6 col-lg-3' : 'col-md-4 col-lg-3';
         selectedIps.slice(0, layout).forEach(ip => {
-            const div = document.createElement('div');
+            const colDiv = document.createElement('div');
+            colDiv.className = rowClass;
+            const videoDiv = document.createElement('div');
+            videoDiv.className = 'position-relative';
             const img = document.createElement('img');
-            img.src = ip;  // Assuming MJPEG or HTTP stream URL for real-time
+            img.src = ip;
             img.alt = 'CCTV Stream';
-            img.classList.add('w-100', 'h-100');
-            div.appendChild(img);
-            grid.appendChild(div);
+            img.classList.add('w-100', 'rounded', 'shadow-sm');
+            img.style.aspectRatio = '16/9';
+            videoDiv.appendChild(img);
+            colDiv.appendChild(videoDiv);
+            grid.appendChild(colDiv);
         });
     }
 
-    // --- Logika Halaman Users (CRUD) jika di users.html ---
+    // --- Logika Halaman Workers (CRUD) jika di users.html ---
     if (window.location.pathname.endsWith('users.html')) {
         loadWorkers();
     }
@@ -235,7 +267,7 @@ document.addEventListener("DOMContentLoaded", function() {
             workersTableBody.innerHTML = '';
             
             if (workers.length === 0) {
-                workersTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No worker data found. Click 'Add New Worker' to begin.</td></tr>`;
+                workersTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No workers found. <a href="#" class="text-primary" data-bs-toggle="modal" data-bs-target="#addWorkerModal">Add the first worker</a> to begin.</td></tr>`;
                 return;
             }
 
@@ -245,21 +277,31 @@ document.addEventListener("DOMContentLoaded", function() {
                     : `<span class="badge bg-danger">Tidak Aktif</span>`;
 
                 workersTableBody.innerHTML += `
-                    <tr>
-                        <td><strong>${w.employee_id}</strong></td>
+                    <tr class="align-middle">
+                        <td><strong class="text-primary">${w.employee_id}</strong></td>
                         <td>${w.name}</td>
-                        <td>${w.company}</td>
+                        <td><span class="badge bg-light text-dark">${w.company}</span></td>
                         <td>${w.role}</td>
                         <td>${statusBadge}</td>
                         <td>
-                            <button class="btn btn-info btn-sm edit-worker-btn" data-id="${w.id}" title="Edit Worker"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-danger btn-sm delete-worker-btn" data-id="${w.id}" title="Delete Worker"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-info btn-sm edit-worker-btn me-1" data-id="${w.id}" title="Edit Worker" data-bs-toggle="tooltip" data-bs-placement="top">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm delete-worker-btn" data-id="${w.id}" title="Delete Worker" data-bs-toggle="tooltip" data-bs-placement="top">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>`;
             });
+
+            // Re-init tooltips after dynamic content
+            const newTooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            newTooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
         } catch (error) {
             console.error("Error loading workers:", error);
-            workersTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load data. Is the backend running?</td></tr>`;
+            workersTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Failed to load workers. <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">Retry</button></td></tr>`;
         }
     }
 
@@ -270,31 +312,54 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (editBtn) {
                 const workerId = editBtn.dataset.id;
-                const response = await fetch(`${API_URL}/api/workers/${workerId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const worker = await response.json();
-                
-                document.getElementById('editWorkerId').value = worker.id;
-                document.getElementById('editEmployeeId').value = worker.employee_id;
-                document.getElementById('editName').value = worker.name;
-                document.getElementById('editCompany').value = worker.company;
-                document.getElementById('editRole').value = worker.role;
-                document.getElementById('editStatusSimL').value = worker.status_sim_l;
+                try {
+                    const response = await fetch(`${API_URL}/api/workers/${workerId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const worker = await response.json();
+                    
+                    document.getElementById('editWorkerId').value = worker.id;
+                    document.getElementById('editEmployeeId').value = worker.employee_id;
+                    document.getElementById('editName').value = worker.name;
+                    document.getElementById('editCompany').value = worker.company;
+                    document.getElementById('editRole').value = worker.role;
+                    document.getElementById('editStatusSimL').value = worker.status_sim_l;
 
-                editWorkerModal.show();
+                    editWorkerModal.show();
+                } catch (error) {
+                    console.error("Error fetching worker:", error);
+                    alert('Error loading worker data.');
+                }
             }
 
             if (deleteBtn) {
                 const workerId = deleteBtn.dataset.id;
                 const workerName = deleteBtn.closest('tr').children[1].textContent;
-                
-                if (confirm(`Are you sure you want to delete ${workerName}?`)) {
-                    await fetch(`${API_URL}/api/workers/${workerId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    loadWorkers();
+                const confirmed = confirm(`Are you sure you want to delete ${workerName}? This action cannot be undone.`);
+                if (confirmed) {
+                    try {
+                        const response = await fetch(`${API_URL}/api/workers/${workerId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (response.ok) {
+                            loadWorkers();
+                            // Success feedback
+                            deleteBtn.innerHTML = '<i class="fas fa-check"></i>';
+                            deleteBtn.classList.remove('btn-danger');
+                            deleteBtn.classList.add('btn-success');
+                            setTimeout(() => {
+                                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                                deleteBtn.classList.remove('btn-success');
+                                deleteBtn.classList.add('btn-danger');
+                            }, 1500);
+                        } else {
+                            alert('Error deleting worker.');
+                        }
+                    } catch (error) {
+                        console.error("Error deleting worker:", error);
+                        alert('Error deleting worker. Please try again.');
+                    }
                 }
             }
         });
@@ -312,14 +377,34 @@ document.addEventListener("DOMContentLoaded", function() {
                 status_sim_l: document.getElementById('editStatusSimL').value
             };
 
-            await fetch(`${API_URL}/api/workers/${workerId}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(workerData)
-            });
+            if (!workerData.name || !workerData.company) {
+                alert('Please fill required fields.');
+                return;
+            }
 
-            editWorkerModal.hide();
-            loadWorkers();
+            try {
+                const response = await fetch(`${API_URL}/api/workers/${workerId}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(workerData)
+                });
+                if (response.ok) {
+                    editWorkerModal.hide();
+                    loadWorkers();
+                    // Success feedback
+                    const btn = event.target;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check me-2"></i>Updated!';
+                    btn.classList.add('btn-success');
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('btn-success');
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error("Error updating worker:", error);
+                alert('Error updating worker.');
+            }
         });
     }
 
@@ -336,6 +421,7 @@ document.addEventListener("DOMContentLoaded", function() {
             stopEnrollmentWebSocket();
             document.getElementById('addWorkerForm').reset();
             enrollmentStatus.textContent = '';
+            enrollmentStatus.className = 'mt-2 fw-bold text-muted';
         });
     }
 
@@ -345,7 +431,7 @@ document.addEventListener("DOMContentLoaded", function() {
         enrollWs = new WebSocket(wsUrl);
 
         enrollWs.onopen = () => {
-            enrollmentStatus.textContent = "Camera ready. Position your face.";
+            enrollmentStatus.textContent = "Camera ready. Position your face in the frame.";
             enrollmentStatus.className = 'mt-2 fw-bold text-success';
         };
 
@@ -367,7 +453,7 @@ document.addEventListener("DOMContentLoaded", function() {
         
         enrollWs.onerror = (event) => {
             console.error("WebSocket Error:", event);
-            enrollmentStatus.textContent = "Failed to connect to camera server. Is the backend running?";
+            enrollmentStatus.textContent = "Failed to connect to camera. Check backend connection.";
             enrollmentStatus.className = 'mt-2 fw-bold text-danger';
         };
         
@@ -380,6 +466,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function stopEnrollmentWebSocket() {
         if (enrollWs) {
             enrollWs.close();
+            enrollWs = null;
         }
     }
     
@@ -395,13 +482,14 @@ document.addEventListener("DOMContentLoaded", function() {
             };
 
             if (!workerData.employee_id || !workerData.name || !workerData.company || !workerData.role) {
-                alert('Please fill all worker details.');
+                alert('Please fill all worker details before capturing.');
                 return;
             }
 
             if (enrollWs && enrollWs.readyState === WebSocket.OPEN) {
                 enrollWs.send(JSON.stringify({ command: 'capture', ...workerData }));
-                enrollmentStatus.textContent = "Capturing...";
+                enrollmentStatus.textContent = "Capturing face... Please hold still.";
+                enrollmentStatus.className = 'mt-2 fw-bold text-info';
             } else {
                 enrollmentStatus.textContent = "Connection error. Cannot capture.";
                 enrollmentStatus.className = 'mt-2 fw-bold text-danger';
@@ -411,9 +499,26 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // --- Logika Logout ---
     logoutBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            localStorage.clear();
-            window.location.href = 'login.html';
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }
+        });
+    });
+
+    // Global smooth scrolling
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
         });
     });
 });

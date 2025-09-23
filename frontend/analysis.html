@@ -1,3 +1,4 @@
+<!-- analysis.html: Added 20px padding for elegant spacing, card-based layout for future content -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,7 +62,7 @@
                 <li>
                     <a href="users.html" class="nav-link">
                         <i class="fa-solid fa-users fa-fw"></i>
-                        <span class="ms-2">Users</span>
+                        <span class="ms-2">Workers</span>
                     </a>
                 </li>
             </ul>
@@ -73,14 +74,32 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="main-content flex-grow-1" style="margin-left: 150px; padding: 0px; padding-top: 10px;">
-            <h4 class="mb-0">Analysis</h4>
-            <div class="d-flex justify-content-between align-items-center mb-0" style="height: 50px;">
-                <div class="d-flex align-items-center"></div>
+        <main class="main-content flex-grow-1" style="margin-left: 170px; padding: 20px; padding-top: 30px;">
+            <h4 class="mb-3" style="color: var(--pertamina-blue);">Analysis</h4>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Analytics Overview</h5>
+                    <p class="text-muted">Fitur ini masih dalam tahap pengembangan. (Visited workers, penggunaan APD yang benar, salah, dll)</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="text-primary"><i class="fas fa-chart-pie me-2"></i>APD Compliance</h6>
+                                    <p class="text-muted small">Charts and statistics coming soon.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="text-primary"><i class="fas fa-users me-2"></i>Worker Visits</h6>
+                                    <p class="text-muted small">Historical data and trends.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <h4>Analysis</h4>
-            <p>Fitur ini masih dalam tahap pengembangan. (Visited worker, penggunaan APD yang benar, salah, dll)</p>
         </main>
     </div>
 

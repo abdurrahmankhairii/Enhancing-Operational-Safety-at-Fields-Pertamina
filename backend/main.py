@@ -53,7 +53,6 @@ async def add_cctv(cctv: CCTV, current_user: dict = Depends(auth.get_current_use
     conn.close()
     return {"status": "success", "message": "CCTV added."}
 
-
 # --- PETA KELAS DAN WARNA ---
 # Pastikan nama kelas di sini sama persis dengan nama kelas di model YOLO Anda
 CLASS_NAMES = {
@@ -187,8 +186,7 @@ async def ws_dashboard(websocket: WebSocket):
             # 5. Kirim data ke frontend
             _, buffer = cv2.imencode('.jpg', frame)
             await websocket.send_bytes(buffer.tobytes())
-            if user_info: # Hanya kirim data JSON jika user terdeteksi
-                await websocket.send_json(response_data)
+            await websocket.send_json(response_data)  # Selalu kirim JSON, bahkan jika user_info None
                 
             await asyncio.sleep(0.05)
 
@@ -197,7 +195,6 @@ async def ws_dashboard(websocket: WebSocket):
     finally:
         if cap.isOpened():
             cap.release()
-
 
 # Ganti fungsi ws_enroll Anda dengan yang ini di file backend/main.py
 
@@ -306,7 +303,6 @@ async def update_worker(worker_id: int, worker_data: WorkerUpdate, current_user:
     conn.close()
     load_known_faces_from_db() # Wajah tidak berubah, tapi data lain perlu di-refresh di memori
     return {"status": "success", "message": "Worker data updated."}
-
 
 @app.delete("/api/workers/{worker_id}", tags=["Workers"])
 async def delete_worker(worker_id: int, current_user: dict = Depends(auth.get_current_user)):

@@ -1,3 +1,4 @@
+<!-- cctv.html: Added 20px padding for elegant spacing from sidebar, improved grid with auto-fit for clean layout -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,7 +62,7 @@
                 <li>
                     <a href="users.html" class="nav-link">
                         <i class="fa-solid fa-users fa-fw"></i>
-                        <span class="ms-2">Users</span>
+                        <span class="ms-2">Workers</span>
                     </a>
                 </li>
             </ul>
@@ -73,39 +74,45 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="main-content flex-grow-1" style="margin-left: 150px; padding: 0px; padding-top: 10px;">
-            <h4 class="mb-0">CCTV</h4>
-            <div class="d-flex justify-content-between align-items-center mb-0" style="height: 50px;">
-                <div class="d-flex align-items-center"></div>
-                <button id="addCctvBtn" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Add New CCTV</button>
+        <main class="main-content flex-grow-1" style="margin-left: 170px; padding: 20px; padding-top: 30px;">
+            <h4 class="mb-3" style="color: var(--pertamina-blue);">CCTV</h4>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div></div>
+                <button id="addCctvBtn" class="btn btn-primary btn-lg shadow-sm"><i class="fas fa-plus me-2"></i>Add New CCTV</button>
             </div>
             
-            <h5>CCTV List</h5>
-            <div class="table-responsive mb-4">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Select</th>
-                            <th>Name</th>
-                            <th>IP Address</th>
-                            <th>Location</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cctvTableBody"></tbody>
-                </table>
-            </div>
-
-            <div class="mb-4">
-                <h5>Select Layout</h5>
-                <div class="btn-group">
-                    <button class="btn btn-secondary layout-btn" data-layout="1">1:1 (Full Screen)</button>
-                    <button class="btn btn-secondary layout-btn" data-layout="2">1:2</button>
-                    <button class="btn btn-secondary layout-btn" data-layout="4">1:4</button>
-                    <button class="btn btn-secondary layout-btn" data-layout="9">1:9</button>
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">CCTV List</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Select</th>
+                                    <th>Name</th>
+                                    <th>IP Address</th>
+                                    <th>Location</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cctvTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <div id="cctvGrid" class="d-grid gap-2" style="grid-template-columns: repeat(1, 1fr); height: calc(100vh - 400px);"></div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Select Layout</h5>
+                    <div class="btn-group w-100" role="group">
+                        <button class="btn btn-outline-secondary layout-btn flex-fill" data-layout="1">1:1 (Full Screen)</button>
+                        <button class="btn btn-outline-secondary layout-btn flex-fill" data-layout="2">1:2</button>
+                        <button class="btn btn-outline-secondary layout-btn flex-fill" data-layout="4">1:4</button>
+                        <button class="btn btn-outline-secondary layout-btn flex-fill" data-layout="9">1:9</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cctvGrid" class="row g-3" style="height: calc(100vh - 500px);"></div>
         </main>
     </div>
 
