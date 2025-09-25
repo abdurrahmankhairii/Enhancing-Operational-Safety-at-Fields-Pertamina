@@ -1,11 +1,13 @@
+<!-- dashboard.html: Overview now scrollable with video, activity log dynamic, status feed on right -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gate System Monitoring - Dashboard</title>
+    <title>Dashboard - Pertamina Gate System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -84,109 +86,47 @@
                         <li class="nav-item" role="presentation"><button class="nav-link active small" data-bs-toggle="tab" data-bs-target="#all" type="button">Show All Workers</button></li>
                     </ul>
                     <div class="activity-log mt-3" style="max-height: calc(100vh - 200px); overflow-y: auto;">
-                        <div class="log-item alert-danger p-2 mb-2">
-                            <div class="log-time small">11:51 AM</div>
-                            <div class="log-details small">
-                                Patima <br> Alert: Not Using Helmet
-                            </div>
-                            <div class="log-action small">
-                                Function: <strong>RAM</strong><br>
-                                <button class="btn btn-sm btn-primary">Assign</button>
-                            </div>
-                        </div>
-                        <div class="log-item alert-warning p-2 mb-2">
-                            <div class="log-time small">12:25 PM</div>
-                            <div class="log-details small">
-                                Abdurrhman Khairi <br> APD Lengkap
-                            </div>
-                            <div class="log-action small">
-                                Function: <strong>ICT</strong><br>
-                                <button class="btn btn-sm btn-secondary">Trigger</button>
-                            </div>
-                        </div>
-                        <div class="log-item p-2 mb-2">
-                            <div class="log-time small">1:31 PM</div>
-                            <div class="log-details small">
-                                Fire Alert <br> No Alert
-                            </div>
-                            <div class="log-action small">
-                                Function: <br>
-                            </div>
-                        </div>
+                        <!-- Dynamic logs loaded here -->
                     </div>
                 </div>
 
-                <!-- Gate System Overview -->
-                <div class="overview-panel" style="margin-left: 200px; padding: 20px; background-color: #ffffff; border-bottom: 1px solid #e0e0e0; height: 150px; position: fixed; top: 65px; left: 350px; width: calc(100% - 350px);">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="mb-0">Gate System Monitoring Overview</h4>
-                        <div class="d-flex align-items-center">
-                            <div class="me-4 text-end">
-                                <h6 class="mb-0" style="font-size: 0.8rem;">Total Workers Today</h6>
-                                <h5 class="mb-0" style="font-size: 1rem;">30</h5>
-                            </div>
-                            <div class="text-end">
-                                <h6 class="mb-0" style="font-size: 0.8rem;">Logged in Workers</h6>
-                                <h5 class="mb-0" style="font-size: 1rem;">964</h5>
+                <!-- Gate System Overview + Video (now together for scroll) -->
+                <div style="margin-left: 0px; width: calc(100%);">
+                    <!-- Overview Panel (no fixed) -->
+                    <div class="overview-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Gate System Monitoring Overview</h4>
+                            <div class="d-flex align-items-center">
+                                <div class="me-4 text-end">
+                                    <h6 class="mb-0" style="font-size: 0.8rem;">Total Workers Today</h6>
+                                    <h5 class="mb-0" style="font-size: 1rem;">30</h5>
+                                </div>
+                                <div class="text-end">
+                                    <h6 class="mb-0" style="font-size: 0.8rem;">Logged in Workers</h6>
+                                    <h5 class="mb-0" style="font-size: 1rem;">964</h5>
+                                </div>
                             </div>
                         </div>
+                        <div class="row g-3" style="height: 70px;">
+                            <div class="col"><div class="card stat-card"><div class="card-body"><h5>21</h5><p>Visited</p></div></div></div>
+                            <div class="col"><div class="card stat-card"><div class="card-body"><h5>0</h5><p>Armed</p></div></div></div>
+                            <div class="col"><div class="card stat-card"><div class="card-body text-danger"><h5>2</h5><p>Triggered</p></div></div></div>
+                            <div class="col"><div class="card stat-card"><div class="card-body text-success"><h5>19</h5><p>Verified</p></div></div></div>
+                            <div class="col"><div class="card stat-card"><div class="card-body"><h5>0</h5><p>Acknowledged</p></div></div></div>
+                        </div>
                     </div>
-                    <div class="row g-3" style="height: 70px;">
-                        <div class="col"><div class="card stat-card"><div class="card-body"><h5>201</h5><p>Visited</p></div></div></div>
-                        <div class="col"><div class="card stat-card"><div class="card-body"><h5>0</h5><p>Armed</p></div></div></div>
-                        <div class="col"><div class="card stat-card"><div class="card-body text-danger"><h5>2</h5><p>Triggered</p></div></div></div>
-                        <div class="col"><div class="card stat-card"><div class="card-body text-success"><h5>17</h5><p>Verified</p></div></div></div>
-                        <div class="col"><div class="card stat-card"><div class="card-body"><h5>0</h5><p>Acknowledged</p></div></div></div>
-                    </div>
-                </div>
 
-                <!-- Video Feed -->
-                <div class="video-container" style="margin-left: 200px; margin-top: 150px; height: calc(100vh - 215px); position: relative; overflow: hidden; background-color: #000000;">
-                    <img id="videoFeed" src="https://via.placeholder.com/1280x720.png?text=Connecting..." class="video-feed" style="width: 100%; height: 100%; object-fit: cover; aspect-ratio: 16 / 9;">
-                    <div id="userInfoPanel" class="user-info-panel d-none">
-                        <h5 id="userName">Abdurrhman Khairi</h5>
-                        <div id="ppeList">
-                            <div class="ppe-list-item">
-                                <div class="item-details">
-                                    <img src="images/helmet.jpg" alt="Helmet">
-                                    <span>Helmet</span>
+                    <!-- Video Feed -->
+                    <div class="video-container" style="height: calc(100vh - 215px); position: relative; overflow: hidden; background-color: #000000;">
+                        <div id="cameraFeed">
+                            <img id="videoFeed" src="https://via.placeholder.com/1280x720.png?text=Connecting..." class="video-feed" style="width: 100%; height: 100%; object-fit: cover; aspect-ratio: 16 / 9;">
+                        </div>
+                        <div id="statusFeed">
+                            <div id="userInfoPanel" class="user-info-panel d-none">
+                                <h5 id="userName">Abdurrhman Khairi</h5>
+                                <div id="ppeList">
+                                    <!-- Dynamic PPE list -->
                                 </div>
-                                <span class="item-status">Memakai</span>
-                            </div>
-                            <div class="ppe-list-item">
-                                <div class="item-details">
-                                    <img src="images/coverall.jpg" alt="Coverall">
-                                    <span>Coverall</span>
-                                </div>
-                                <span class="item-status">Memakai</span>
-                            </div>
-                            <div class="ppe-list-item">
-                                <div class="item-details">
-                                    <img src="images/glasses.jpg" alt="Glasses">
-                                    <span>Glasses</span>
-                                </div>
-                                <span class="item-status">Memakai</span>
-                            </div>
-                            <div class="ppe-list-item">
-                                <div class="item-details">
-                                    <img src="images/mask.jpg" alt="Mask">
-                                    <span>Mask</span>
-                                </div>
-                                <span class="item-status">Memakai</span>
-                            </div>
-                            <div class="ppe-list-item">
-                                <div class="item-details">
-                                    <img src="images/hand-gloves.jpg" alt="Hand Gloves">
-                                    <span>Hand Gloves</span>
-                                </div>
-                                <span class="item-status">Memakai</span>
-                            </div>
-                            <div class="ppe-list-item">
-                                <div class="item-details">
-                                    <img src="images/shoes.jpg" alt="Shoes">
-                                    <span>Shoes</span>
-                                </div>
-                                <span class="item-status">Memakai</span>
                             </div>
                         </div>
                     </div>

@@ -38,6 +38,27 @@ document.addEventListener("DOMContentLoaded", function() {
     // --- Logika Dashboard jika di dashboard.html ---
     if (window.location.pathname.endsWith('dashboard.html')) {
         startDashboardWebSocket();
+        loadActivityLogs();  // Load initial
+        setInterval(loadActivityLogs, 5000);  // Real-time refresh every 5s
+    }
+
+    function loadActivityLogs() {
+        const activityLog = document.querySelector('.activity-log');
+        if (!activityLog) return;
+        fetch(`${API_URL}/api/logs?limit=10&filter=today`, {  // Recent 10 today
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.json()).then(logs => {
+            activityLog.innerHTML = '';
+            logs.forEach(log => {
+                const statusClass = log.status === 'hijau' ? 'alert-success' : log.status === 'orange' ? 'alert-warning' : 'alert-danger';
+                activityLog.innerHTML += `
+                    <div class="log-item alert ${statusClass}">
+                        <div class="log-time">${new Date(log.timestamp).toLocaleTimeString()}</div>
+                        <div class="log-details">${log.name} - ${log.description}</div>
+                        <div class="log-action"><button class="btn btn-sm btn-outline-secondary">View</button></div>
+                    </div>`;
+            });
+        }).catch(err => console.error(err));
     }
 
     function startDashboardWebSocket() {
@@ -75,16 +96,18 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function updateUserInfoPanel(data, panelEl, nameEl, listEl) {
-        if (!data || !data.user || !data.ppe_status) {
+        if (!data || !data.users || data.users.length === 0) {
             panelEl.classList.add('d-none');
             return;
         }
 
+        // Display first user for panel; handle multiple if needed
+        const firstUser = data.users[0];
         panelEl.classList.remove('d-none');
-        nameEl.textContent = data.user.name;
+        nameEl.textContent = `${firstUser.user.name} - ${firstUser.user.role} @ ${firstUser.user.company}`;
 
-        panelEl.classList.remove('status-aman', 'status-peringatan', 'status-bahaya');
-        const overallStatus = data.ppe_status.overall;
+        panelEl.classList.remove('status-hijau', 'status-orange', 'status-merah');
+        const overallStatus = firstUser.ppe_status.overall;
         panelEl.classList.add(`status-${overallStatus}`);
 
         let ppeHtml = '';
@@ -104,12 +127,12 @@ document.addEventListener("DOMContentLoaded", function() {
         };
         
         ppeHtml += '<h6>APD Wajib</h6>';
-        for (const [item, isDetected] of Object.entries(data.ppe_status.wajib)) {
+        for (const [item, isDetected] of Object.entries(firstUser.ppe_status.wajib)) {
             ppeHtml += createListItem(item.charAt(0).toUpperCase() + item.slice(1), isDetected);
         }
 
         ppeHtml += '<h6 class="mt-3">APD Opsional</h6>';
-        for (const [item, isDetected] of Object.entries(data.ppe_status.opsional)) {
+        for (const [item, isDetected] of Object.entries(firstUser.ppe_status.opsional)) {
             let name = item.replace('-', ' ');
             name = name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
             ppeHtml += createListItem(name, isDetected);
@@ -147,7 +170,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 const cctvData = {
                     name: document.getElementById('cctvName').value,
                     ip_address: document.getElementById('ipAddress').value,
-                    location: document.getElementById('location').value
+                    location: document.getElementById('location').value,
+                    port: document.getElementById('port').value,
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
                 };
                 if (!cctvData.name || !cctvData.ip_address || !cctvData.location) {
                     alert('Please fill all fields.');
@@ -230,24 +256,82 @@ document.addEventListener("DOMContentLoaded", function() {
         const selectedIps = Array.from(selectedCheckboxes).map(cb => cb.dataset.ip);
         const grid = document.getElementById('cctvGrid');
         grid.innerHTML = '';
-        let cols = Math.min(layout, selectedIps.length);
-        if (cols === 0) return;
-        // Dynamic grid based on layout
-        const rowClass = cols === 1 ? 'col-12' : cols === 2 ? 'col-md-6' : cols === 4 ? 'col-md-6 col-lg-3' : 'col-md-4 col-lg-3';
+        const numStreams = Math.min(layout, selectedIps.length);
+        if (numStreams === 0) return;
+
+        let rows = 1, cols = 1;
+        if (layout === 1) { rows = 1; cols = 1; }
+        else if (layout === 2) { rows = 1; cols = 2; }
+        else if (layout === 4) { rows = 2; cols = 2; }
+        else if (layout === 9) { rows = 3; cols = 3; }
+
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+        grid.style.height = '100%';  // Full height
+        grid.style.display = 'grid';  // Ensure grid
+
         selectedIps.slice(0, layout).forEach(ip => {
-            const colDiv = document.createElement('div');
-            colDiv.className = rowClass;
             const videoDiv = document.createElement('div');
-            videoDiv.className = 'position-relative';
             const img = document.createElement('img');
             img.src = ip;
             img.alt = 'CCTV Stream';
-            img.classList.add('w-100', 'rounded', 'shadow-sm');
-            img.style.aspectRatio = '16/9';
             videoDiv.appendChild(img);
-            colDiv.appendChild(videoDiv);
-            grid.appendChild(colDiv);
+            grid.appendChild(videoDiv);
         });
+    }
+
+    // For history page
+    if (window.location.pathname.endsWith('history.html')) {
+        const filterSelect = document.getElementById('historyFilter');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', loadHistoryLogs);
+        }
+        const loadBtn = document.getElementById('loadHistoryBtn');
+        if (loadBtn) {
+            loadBtn.addEventListener('click', () => {
+                const start = document.getElementById('startDate').value;
+                const end = document.getElementById('endDate').value;
+                loadHistoryLogs(start, end);
+            });
+        }
+        loadHistoryLogs();
+    }
+
+    async function loadHistoryLogs(start = null, end = null) {
+        const historyTableBody = document.getElementById('historyTableBody');
+        if (!historyTableBody) return;
+        let url = `${API_URL}/api/logs?limit=100`;
+        const filter = document.getElementById('historyFilter') ? document.getElementById('historyFilter').value : 'all';
+        if (start && end) {
+            url += `&start_date=${start}&end_date=${end}`;
+        } else {
+            url += `&filter=${filter}`;
+        }
+        try {
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const logs = await response.json();
+            historyTableBody.innerHTML = '';
+            logs.forEach(log => {
+                const statusBadge = log.status === 'hijau' ? '<span class="badge bg-success">Hijau</span>' :
+                                    log.status === 'orange' ? '<span class="badge bg-warning">Orange</span>' :
+                                    '<span class="badge bg-danger">Merah</span>';
+                const descHtml = log.description.replace(/<b style='color:red'>(.*?)<\/b>/g, '<b class="text-danger">$1</b>').replace(/<b style='color:orange'>(.*?)<\/b>/g, '<b class="text-warning">$1</b>');
+                historyTableBody.innerHTML += `
+                    <tr>
+                        <td>${new Date(log.timestamp).toLocaleString()}</td>
+                        <td>${log.name}</td>
+                        <td>${statusBadge}</td>
+                        <td>${descHtml}</td>
+                        <td>${log.role}</td>
+                        <td>${log.company}</td>
+                    </tr>`;
+            });
+        } catch (error) {
+            console.error("Error loading history logs:", error);
+            historyTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load history</td></tr>`;
+        }
     }
 
     // --- Logika Halaman Workers (CRUD) jika di users.html ---

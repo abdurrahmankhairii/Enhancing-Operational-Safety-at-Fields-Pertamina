@@ -1,3 +1,4 @@
+# models.py (Updated CCTV model with new fields)
 from pydantic import BaseModel
 
 class WorkerUpdate(BaseModel):
@@ -11,3 +12,6 @@ class CCTV(BaseModel):
     name: str
     ip_address: str
     location: str
+    port: int 
+    username: str 
+    password: str 

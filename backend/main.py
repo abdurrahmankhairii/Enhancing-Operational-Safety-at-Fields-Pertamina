@@ -1,3 +1,4 @@
+# main.py (Updated for continuous detection, status panel, new DB table, custom history filters)
 import cv2
 import torch
 import face_recognition
@@ -12,6 +13,7 @@ from starlette.websockets import WebSocketDisconnect
 from ultralytics import YOLO
 from pydantic import BaseModel 
 import concurrent.futures
+from datetime import datetime, timedelta
 
 import auth
 from database import get_db_connection
@@ -37,7 +39,7 @@ app.add_middleware(
 async def get_all_cctv(current_user: dict = Depends(auth.get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, ip_address, location FROM cctv_streams")
+    cursor.execute("SELECT id, name, ip_address, location, port, username, password FROM cctv_streams")
     cctvs = cursor.fetchall()
     conn.close()
     return cctvs
@@ -46,15 +48,14 @@ async def get_all_cctv(current_user: dict = Depends(auth.get_current_user)):
 async def add_cctv(cctv: CCTV, current_user: dict = Depends(auth.get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
-    sql = "INSERT INTO cctv_streams (name, ip_address, location) VALUES (%s, %s, %s)"
-    val = (cctv.name, cctv.ip_address, cctv.location)
+    sql = "INSERT INTO cctv_streams (name, ip_address, location, port, username, password) VALUES (%s, %s, %s, %s, %s, %s)"
+    val = (cctv.name, cctv.ip_address, cctv.location, cctv.port if cctv.port else None, cctv.username if cctv.username else None, cctv.password if cctv.password else None)
     cursor.execute(sql, val)
     conn.commit()
     conn.close()
     return {"status": "success", "message": "CCTV added."}
 
 # --- PETA KELAS DAN WARNA ---
-# Pastikan nama kelas di sini sama persis dengan nama kelas di model YOLO Anda
 CLASS_NAMES = {
     0: 'person', 1: 'ear', 2: 'ear-muffs', 3: 'face', 4: 'face-guard',
     5: 'face-mask', 6: 'foot', 7: 'tool', 8: 'glasses', 9: 'gloves',
@@ -115,12 +116,72 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = auth.create_access_token(data={"sub": user['username'], "role": user['role']})
     return {"access_token": access_token, "token_type": "bearer", "role": user['role']}
 
+# --- API Endpoints for Logs (updated with filter, using gate_logs, added custom date range) ---
+@app.get("/api/logs", tags=["Logs"])
+async def get_logs(limit: int = 50, filter: str = "all", start_date: str = None, end_date: str = None, current_user: dict = Depends(auth.get_current_user)):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    sql = """
+        SELECT gl.log_id, gl.timestamp_in AS timestamp, gl.ppe_status AS status, gl.ppe_details, w.name, w.company, w.role
+        FROM gate_logs gl
+        JOIN workers w ON gl.worker_id = w.id
+    """
+    val = []
+    now = datetime.now()
+    if start_date and end_date:  # Custom range
+        sql += " WHERE gl.timestamp_in BETWEEN %s AND %s"
+        val.extend([datetime.strptime(start_date, '%Y-%m-%d'), datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)])
+    elif filter == "today":
+        sql += " WHERE gl.timestamp_in >= %s"
+        val.append(now.replace(hour=0, minute=0, second=0, microsecond=0))
+    elif filter == "this_week":
+        start_week = now - timedelta(days=now.weekday())  # Mulai Senin
+        sql += " WHERE gl.timestamp_in >= %s"
+        val.append(start_week.replace(hour=0, minute=0, second=0, microsecond=0))
+    elif filter == "this_month":
+        start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        sql += " WHERE gl.timestamp_in >= %s"
+        val.append(start_month)
+    elif filter == "this_year":
+        start_year = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        sql += " WHERE gl.timestamp_in >= %s"
+        val.append(start_year)
+    elif filter == "last_year":
+        start_last = datetime(now.year - 1, 1, 1)
+        end_last = datetime(now.year, 1, 1)
+        sql += " WHERE gl.timestamp_in >= %s AND gl.timestamp_in < %s"
+        val.extend([start_last, end_last])
+    elif filter == "2024":
+        start_2024 = datetime(2024, 1, 1)
+        end_2024 = datetime(2025, 1, 1)
+        sql += " WHERE gl.timestamp_in >= %s AND gl.timestamp_in < %s"
+        val.extend([start_2024, end_2024])
+    elif filter == "2023":
+        start_2023 = datetime(2023, 1, 1)
+        end_2023 = datetime(2024, 1, 1)
+        sql += " WHERE gl.timestamp_in >= %s AND gl.timestamp_in < %s"
+        val.extend([start_2023, end_2023])
+
+    sql += " ORDER BY gl.timestamp_in DESC LIMIT %s"
+    val.append(limit)
+
+    cursor.execute(sql, tuple(val))
+    logs = cursor.fetchall()
+    # Parse ppe_details JSON for description
+    for log in logs:
+        details = json.loads(log['ppe_details'])
+        log['description'] = details['description']
+        log.pop('ppe_details')  # Clean up
+    conn.close()
+    return logs
+
 # --- WebSocket untuk Dashboard & Enrollment ---
 # --- FUNGSI UTAMA YANG DIPERBARUI TOTAL ---
 @app.websocket("/ws/dashboard")
 async def ws_dashboard(websocket: WebSocket):
     await websocket.accept()
     cap = cv2.VideoCapture(0)
+    last_records = {}  # Track last record time per user to avoid spam (record every 60s or on change)
     try:
         while True:
             ret, frame = cap.read()
@@ -142,53 +203,91 @@ async def ws_dashboard(websocket: WebSocket):
                     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-            # 2. Kenali wajah
+            # 2. Kenali wajah (support multiple faces)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             face_locations = face_recognition.face_locations(rgb_frame)
             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
             
-            user_info = None
-            if face_encodings:
-                matches = face_recognition.compare_faces(known_face_encodings, face_encodings[0], tolerance=0.5)
+            user_infos = []
+            for i, encoding in enumerate(face_encodings):
+                matches = face_recognition.compare_faces(known_face_encodings, encoding, tolerance=0.5)
                 if True in matches:
                     match_index = matches.index(True)
                     user_info = known_face_metadata[match_index]
+                    user_infos.append(user_info)
 
-            # 3. Analisis Kepatuhan APD
-            status_wajib = {item: (item in detected_items) for item in PPE_WAJIB}
-            status_opsional = {item: (item in detected_items) for item in PPE_OPSIONAL}
+                    # Tampilkan nama, role, company di dekat wajah
+                    top, right, bottom, left = face_locations[i]
+                    text = f"{user_info['name']} - {user_info['role']} @ {user_info['company']}"
+                    cv2.putText(frame, text, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
-            is_wajib_lengkap = all(status_wajib.values())
-            is_opsional_lengkap = all(status_opsional.values())
+            # 3. Analisis Kepatuhan APD dan SIML untuk setiap user
+            response_data = {"users": []}
+            for user_info in user_infos:
+                # Asumsi deteksi APD global; untuk per person, butuh asosiasi lanjutan (tambahkan proximity check if needed)
+                status_wajib = {item: (item in detected_items) for item in PPE_WAJIB}
+                status_opsional = {item: (item in detected_items) for item in PPE_OPSIONAL}
 
-            overall_status = "aman"
-            if not is_wajib_lengkap:
-                overall_status = "bahaya"
-            elif not is_opsional_lengkap:
-                overall_status = "peringatan"
+                is_wajib_lengkap = all(status_wajib.values())
+                is_opsional_lengkap = all(status_opsional.values())
+                is_siml_aktif = user_info['status_sim_l'] == 'Aktif'
 
-            # 4. Siapkan data untuk dikirim ke frontend
-            response_data = {
-                "user": user_info,
-                "ppe_status": {
-                    "wajib": status_wajib,
-                    "opsional": status_opsional,
-                    "overall": overall_status
-                }
-            }
-            
-            # Ganti label "person" dengan nama user jika dikenali
-            if user_info:
-                # Ini adalah contoh sederhana, implementasi yang lebih baik akan mencari box 'person'
-                # dan menimpanya dengan nama. Untuk sekarang, kita tampilkan saja di pojok.
-                cv2.putText(frame, user_info['name'], (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+                overall_status = "merah"
+                description = []
 
-            # 5. Kirim data ke frontend
+                if not is_siml_aktif:
+                    overall_status = "merah"
+                    description.append("SIML Tidak Aktif")
+                else:
+                    if not is_wajib_lengkap:
+                        overall_status = "merah"
+                        missing_wajib = [item for item, detected in status_wajib.items() if not detected]
+                        description.extend([f"Tidak Menggunakan <b style='color:red'>{item.capitalize()}</b>" for item in missing_wajib])
+                    else:
+                        if is_opsional_lengkap:
+                            overall_status = "hijau"
+                            description.append("APD Lengkap dan SIML Aktif")
+                        else:
+                            overall_status = "orange"
+                            missing_opsional = [item for item, detected in status_opsional.items() if not detected]
+                            description.extend([f"Tidak Menggunakan <b style='color:orange'>{item.capitalize()}</b>" for item in missing_opsional])
+
+                # 4. Record to DB if new or changed (every 60s max)
+                user_id = user_info['id']
+                now = datetime.now()
+                last_time = last_records.get(user_id, now - timedelta(seconds=61))
+                if (now - last_time).total_seconds() > 60:  # Record if >60s since last
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    sql = """
+                        INSERT INTO gate_logs (worker_id, timestamp_in, ppe_status, ppe_details, cctv_id)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """
+                    ppe_used = {"wajib": status_wajib, "opsional": status_opsional}
+                    details = json.dumps({"ppe_used": ppe_used, "description": "; ".join(description)})
+                    val = (user_id, now, overall_status, details, None)  # cctv_id None for dashboard
+                    cursor.execute(sql, val)
+                    conn.commit()
+                    conn.close()
+                    last_records[user_id] = now
+
+                # Tambah ke response untuk status panel
+                response_data["users"].append({
+                    "user": user_info,
+                    "ppe_status": {
+                        "wajib": status_wajib,
+                        "opsional": status_opsional,
+                        "overall": overall_status,
+                        "description": description
+                    }
+                })
+
+            # 5. Kirim data ke frontend (continuous, no break)
             _, buffer = cv2.imencode('.jpg', frame)
             await websocket.send_bytes(buffer.tobytes())
-            await websocket.send_json(response_data)  # Selalu kirim JSON, bahkan jika user_info None
+            await websocket.send_json(response_data)
                 
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.1)  # Optimized sleep for smoother feed
 
     except WebSocketDisconnect:
         print("Dashboard client disconnected.")
@@ -196,7 +295,7 @@ async def ws_dashboard(websocket: WebSocket):
         if cap.isOpened():
             cap.release()
 
-# Ganti fungsi ws_enroll Anda dengan yang ini di file backend/main.py
+# Ganti fungsi ws_enroll Anda dengan yang ini di file backend/main.py (no change, kept as is)
 
 @app.websocket("/ws/enroll")
 async def ws_enroll(websocket: WebSocket):
@@ -227,7 +326,6 @@ async def ws_enroll(websocket: WebSocket):
                     face_encoding = face_recognition.face_encodings(rgb_frame, face_locations)[0]
                     encoding_bytes = pickle.dumps(face_encoding)
                     
-                    # --- BLOK PERBAIKAN DIMULAI DI SINI ---
                     try:
                         conn = get_db_connection()
                         cursor = conn.cursor()
@@ -244,11 +342,9 @@ async def ws_enroll(websocket: WebSocket):
                         await websocket.send_json({"status": "success", "message": f"Worker {message['name']} berhasil ditambahkan."})
 
                     except Exception as e:
-                        # Ini akan menangkap error "Duplicate entry" dan error database lainnya
                         print(f"DATABASE ERROR: {e}")
                         error_message = f"Error: Employee ID '{message['employee_id']}' sudah terdaftar."
                         await websocket.send_json({"status": "error", "message": error_message})
-                    # --- BLOK PERBAIKAN SELESAI ---
 
                 else:
                     msg = "Wajah tidak terdeteksi." if len(face_locations) == 0 else "Terdeteksi lebih dari satu wajah."
@@ -256,7 +352,7 @@ async def ws_enroll(websocket: WebSocket):
 
             _, buffer = cv2.imencode('.jpg', frame)
             await websocket.send_bytes(buffer.tobytes())
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.1)  # Optimized
             
     except WebSocketDisconnect: 
         print("Enrollment client disconnected.")
@@ -264,7 +360,7 @@ async def ws_enroll(websocket: WebSocket):
         if cap.isOpened():
             cap.release()
 
-# --- API Endpoints CRUD untuk Workers ---
+# --- API Endpoints CRUD untuk Workers --- (no change, kept as is)
 @app.get("/api/workers", tags=["Workers"])
 async def get_all_workers(current_user: dict = Depends(auth.get_current_user)):
     conn = get_db_connection()
@@ -274,10 +370,8 @@ async def get_all_workers(current_user: dict = Depends(auth.get_current_user)):
     conn.close()
     return workers
 
-# --- PENAMBAHAN BARU ---
 @app.get("/api/workers/{worker_id}", tags=["Workers"])
 async def get_worker_by_id(worker_id: int, current_user: dict = Depends(auth.get_current_user)):
-    """Mengambil data satu worker spesifik untuk ditampilkan di form edit."""
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT id, employee_id, name, company, role, status_sim_l FROM workers WHERE id = %s", (worker_id,))
@@ -287,10 +381,8 @@ async def get_worker_by_id(worker_id: int, current_user: dict = Depends(auth.get
         raise HTTPException(status_code=404, detail="Worker not found")
     return worker
 
-# --- PENAMBAHAN BARU ---
 @app.put("/api/workers/{worker_id}", tags=["Workers"])
 async def update_worker(worker_id: int, worker_data: WorkerUpdate, current_user: dict = Depends(auth.get_current_user)):
-    """Menyimpan perubahan data worker dari form edit."""
     conn = get_db_connection()
     cursor = conn.cursor()
     sql = """
@@ -300,9 +392,12 @@ async def update_worker(worker_id: int, worker_data: WorkerUpdate, current_user:
     val = (worker_data.employee_id, worker_data.name, worker_data.company, worker_data.role, worker_data.status_sim_l, worker_id)
     cursor.execute(sql, val)
     conn.commit()
+    affected = cursor.rowcount > 0
     conn.close()
-    load_known_faces_from_db() # Wajah tidak berubah, tapi data lain perlu di-refresh di memori
-    return {"status": "success", "message": "Worker data updated."}
+    if affected:
+        load_known_faces_from_db()
+        return {"status": "success", "message": "Worker data updated."}
+    raise HTTPException(status_code=404, detail="Worker not found")
 
 @app.delete("/api/workers/{worker_id}", tags=["Workers"])
 async def delete_worker(worker_id: int, current_user: dict = Depends(auth.get_current_user)):
